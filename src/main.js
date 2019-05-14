@@ -1,12 +1,28 @@
-const Block = require("./blockchain/Block");
-const Chain = require("./blockchain/Chain");
+const express = require("express");
+const bodyParser = require("body-parser");
+const _ = require("lodash");
 
-let chain = new Chain();
+// Env Variable
+const httpPort = parseInt(process.env.HTTP_PORT) || 8001;
+const p2pPort = parseInt(process.env.P2P_PORT) || 8301;
 
-const block1 = new Block([], "123");
-const block2 = new Block([], "123");
+const initHttpServer = myHttpPort => {
+  const app = express();
+  app.use(bodyParser.json());
 
-chain.addBlock(block1);
+  // Route
+  const indexRouter = require("./routes/index");
+  const blockRouter = require("./routes/block");
 
-chain.addBlock(block2);
-console.log(JSON.stringify(chain.chain, null, 4));
+  app.use("/", indexRouter);
+  app.use("/block", blockRouter);
+
+  // Start Server
+  app.listen(myHttpPort, () => {
+    console.log("Listening http on port: " + myHttpPort);
+  });
+};
+
+initHttpServer(httpPort);
+//initP2PServer(p2pPort);
+//initWallet();

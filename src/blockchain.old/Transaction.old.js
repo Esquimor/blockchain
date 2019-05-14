@@ -1,8 +1,15 @@
 const SHA256 = require("crypto-js/sha256");
 
+/**
+ * Create a Transaction
+ *
+ * @public
+ */
 class Transaction {
   /**
    * Create a Transaction
+   *
+   * @public
    *
    * @param {String} fromAdress
    * @param {String} toAdress
@@ -17,6 +24,8 @@ class Transaction {
 
   /**
    * Calcul the hash of the transaction
+   *
+   * @public
    *
    * @returns {String}
    */
