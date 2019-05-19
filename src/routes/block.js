@@ -15,6 +15,22 @@ router.get("/all", function(req, res, next) {
 /**
  * Add a transaction
  */
-router.post("/add", function(req, res, next) {});
+router.post("/add", function(req, res, next) {
+  const { addressReceving, amount, privateKey } = req.body;
+
+  const newTransaction = blockchain.createTransaction(
+    addressReceving,
+    amount,
+    privateKey
+  );
+
+  const newBlock = blockchain.createBlock(newTransaction);
+  const validBlock = blockchain.addBlock(newBlock);
+  if (validBlock) {
+    res.json({ block: newBlock });
+  } else {
+    res.status(400).send("Bad Block");
+  }
+});
 
 module.exports = router;

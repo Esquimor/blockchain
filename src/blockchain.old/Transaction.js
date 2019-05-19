@@ -90,7 +90,7 @@ class Transaction {
    */
   validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex) {
     const coinbaseTx = aTransactions[0];
-    if (!validateCoinbaseTx(coinbaseTx, blockIndex)) {
+    if (!this.validateCoinbaseTx(coinbaseTx, blockIndex)) {
       console.log(
         "invalid coinbase transaction: " + JSON.stringify(coinbaseTx)
       );

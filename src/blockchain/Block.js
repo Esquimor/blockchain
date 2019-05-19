@@ -1,34 +1,32 @@
-const SHA256 = require("crypto-js/sha256");
-const { DIFFICUTY } = require("./const");
-
 class Block {
-  constructor(index, previousHash = "", transactions, nonce) {
+  constructor(index, previousHash, nonce, difficulty, transactions) {
     this.index = index;
-    this.previousHash = previousHash;
     this.timestamp = new Date().toString();
-    this.transactions = transactions;
+    this.previousHash = previousHash;
     this.nonce = nonce;
-    this.hash = this.calculateHash();
+    this.difficulty = difficulty;
+    this.transactions = transactions;
+    this.hash = this.generateHash();
   }
 
-  calculateHash() {
+  generateHash() {
     return SHA256(
-      this.previousHash +
+      this.index +
+        this.previousHash +
         this.timestamp +
         this.nonce +
+        this.difficulty +
         JSON.stringify(this.transactions)
     ).toString();
   }
 
   isValidBlock(previousBlock) {
-    if (this.previousHash !== this.previousBlock.hash) return false;
-
-    if (this.index - 1 !== this.previousBlock.index) return false;
-
-    if (this.hash !== this.calculateHash()) return false;
-
-    if (newBlock.hash.slice(DIFFICUTY) != 0) return false;
+    if (previousBlock.index + 1 !== this.index) return false;
+    if (previousBlock.timestamp > this.timestamp) return false;
+    if (previousBlock.hash !== this.previousHash) return false;
+    if (this.hash !== this.generateHash()) return false;
     return true;
   }
 }
+
 module.exports = Block;

@@ -1,13 +1,27 @@
-const Block = require("./Block");
-const { DIFFICUTY } = require("./const");
+const SHA256 = require("crypto-js/sha256");
+
+const BLOCK_GENERATION_INTERVAL = 2;
+
+const DIFFICULTY_ADJUSTMENT_INTERVAL = 2;
 
 class Chain {
   constructor() {
-    this.chain = [this.genesisBlock()];
+    this.chain = [];
+    this.unspendTxOut = [];
   }
 
-  genesisBlock() {
-    return new Block(0, "0", [], 0);
+  createGenesisBlock() {
+    return new Block(0, "0", 0, 0, []);
+  }
+
+  addBlockToChain(block) {
+    if (!block.isValidBlock(this.getLastedBlock())) return false;
+    this.chain.push(block);
+    return true;
+  }
+
+  getLastedBlock() {
+    return this.chain[this.chain.length - 1];
   }
 
   isValidChain() {
@@ -29,47 +43,83 @@ class Chain {
     return true;
   }
 
-  latestBlock() {
-    return this.chain[this.chain.length - 1];
+  replaceChain(newChain) {
+    if (
+      newChain.isValidChain() &&
+      newChain.getAccumulatedDifficulty() > this.getAccumulatedDifficulty()
+    ) {
+      this.chain = newChain;
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  getChain() {
-    return this.chain;
+  getAccumulatedDifficulty() {
+    return this.chain
+      .map(block => block.difficulty)
+      .map(difficulty => Math.pow(2, difficulty))
+      .reduce((a, b) => a + b);
   }
 
-  createBlock(transaction) {
+  mineBlock(transactions) {
     let nonce = 0;
+    const latestBlock = this.getLastedBlock();
+    const difficulty = this.getDifficulty();
     while (true) {
       const newBlock = new Block(
-        this.latestBlock.index,
-        this.latestBlock.hash,
-        transaction,
-        nonce
+        latestBlock.index + 1,
+        latestBlock.hash,
+        nonce,
+        difficulty,
+        transactions
       );
-      if (newBlock.hash.slice(DIFFICUTY) == 0) {
+      if (this.hashMatchesDifficulty(newBlock.hash, difficulty)) {
         return newBlock;
       }
       nonce++;
     }
   }
 
-  addBlock(block) {
-    if (block.isValidBlock(this.latestBlock())) {
-      this.chain.push(block);
+  mineAddBlock(transactions) {
+    if (this.addBlockToChain(this.mineBlock(transactions))) {
       return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
-  remplaceChain(remplacementChain) {
+  getDifficulty() {
+    const latestBlock = this.getLastedBlock();
     if (
-      remplacementChain.isValidChain() &&
-      remplacementChain.length > this.chain
+      latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
+      latestBlock.index !== 0
     ) {
-      this.chain = remplacementChain;
-      return true;
+      return getAdjustedDifficulty();
+    } else {
+      return latestBlock.difficulty;
     }
-    return false;
+  }
+
+  getAdjustedDifficulty() {
+    const prevAdjustmentBlock = this.chain[
+      this.chain.length - DIFFICULTY_ADJUSTMENT_INTERVAL
+    ];
+    const timeExpected =
+      BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
+    const timeTaken = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
+    if (timeTaken < timeExpected / 2) {
+      return prevAdjustmentBlock.difficulty + 1;
+    } else if (timeTaken > timeExpected * 2) {
+      return prevAdjustmentBlock.difficulty - 1;
+    } else {
+      return prevAdjustmentBlock.difficulty;
+    }
+  }
+
+  hashMatchesDifficulty(hash, difficulty) {
+    const requiredPrefix = "0".repeat(difficulty);
+    return hash.startsWith(requiredPrefix);
   }
 }
 

@@ -25,5 +25,8 @@
     "express": "^4.16.4",
     "lodash": "^4.17.11",
     "redis": "^2.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.0"
   }
 }

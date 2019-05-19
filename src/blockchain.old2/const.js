@@ -1,0 +1,1 @@
+exports.DIFFICUTY = 2;
