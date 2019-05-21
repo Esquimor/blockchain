@@ -6,3 +6,5 @@ class UnspendTxOut {
     this.amount = amount;
   }
 }
+
+module.exports = UnspendTxOut;

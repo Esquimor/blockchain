@@ -1,3 +1,3 @@
-const Chain = require("./blockchain.old2/Chain");
+const Chain = require("./blockchain/Chain");
 
 module.exports = new Chain();

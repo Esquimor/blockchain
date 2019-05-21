@@ -1,8 +1,10 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const _ = require("lodash");
+const dotenv = require("dotenv");
 
 // Env Variable
+dotenv.config();
 const httpPort = parseInt(process.env.HTTP_PORT) || 8001;
 const p2pPort = parseInt(process.env.P2P_PORT) || 8301;
 
@@ -13,9 +15,11 @@ const initHttpServer = myHttpPort => {
   // Route
   const indexRouter = require("./routes/index");
   const blockRouter = require("./routes/block");
+  const userRouter = require("./routes/user");
 
   app.use("/", indexRouter);
   app.use("/block", blockRouter);
+  app.use("/user", userRouter);
 
   // Start Server
   app.listen(myHttpPort, () => {

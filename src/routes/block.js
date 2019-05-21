@@ -18,16 +18,13 @@ router.get("/all", function(req, res, next) {
 router.post("/add", function(req, res, next) {
   const { addressReceving, amount, privateKey } = req.body;
 
-  const newTransaction = blockchain.createTransaction(
-    addressReceving,
+  const validBlock = blockchain.mineAddBlockWithTransaction(
+    privateKey,
     amount,
-    privateKey
+    addressReceving
   );
-
-  const newBlock = blockchain.createBlock(newTransaction);
-  const validBlock = blockchain.addBlock(newBlock);
   if (validBlock) {
-    res.json({ block: newBlock });
+    res.json({ block: blockchain.getLastedBlock() });
   } else {
     res.status(400).send("Bad Block");
   }

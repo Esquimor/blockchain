@@ -4,17 +4,23 @@ const blockchain = require("../blockchain");
 
 /* GET users listing. */
 router.get("/", function(req, res, next) {
-  res.send("respond with a resource");
+  res.status(200).send(blockchain.chain);
 });
 
-router.get("/amount/add", function(req, res, next) {
+router.post("/amount/add", function(req, res, next) {
   const { amount, addressReceving } = req.body;
 
-  const newTransaction = blockchain.createTransaction(
+  const validBlock = blockchain.mineAddBlockWithTransactionPayed(
     addressReceving,
-    amount,
-    privateKey
+    amount
   );
+  if (validBlock) {
+    res.status(200).send({
+      block: blockchain.getLastedBlock()
+    });
+  } else {
+    res.status(500).send("an error has occured");
+  }
 });
 
 module.exports = router;

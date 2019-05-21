@@ -1,12 +1,17 @@
-const SHA256 = require("crypto-js/sha256");
-
+const Transaction = require("./Transaction");
+const TxIn = require("./TxIn");
+const TxOut = require("./TxOut");
+const Block = require("./Block");
+const UnspentTxOut = require("./UnspendTxOut");
 const BLOCK_GENERATION_INTERVAL = 2;
+const { getPublicKey } = require("./utils");
 
 const DIFFICULTY_ADJUSTMENT_INTERVAL = 2;
+const COINBASE_AMOUNT = 5;
 
 class Chain {
   constructor() {
-    this.chain = [];
+    this.chain = [this.createGenesisBlock()];
     this.unspendTxOut = [];
   }
 
@@ -16,8 +21,44 @@ class Chain {
 
   addBlockToChain(block) {
     if (!block.isValidBlock(this.getLastedBlock())) return false;
+    const retVal = this.updateUnspentTxOuts(
+      block.transactions,
+      this.unspendTxOut
+    );
+    if (retVal === null) return false;
+    this.unspendTxOut = retVal;
     this.chain.push(block);
     return true;
+  }
+
+  updateUnspentTxOuts(aTransactions, aUnspentTxOuts) {
+    const newUnspentTxOuts = aTransactions
+      .map(t => {
+        return t.txOuts.map(
+          (txOut, index) =>
+            new UnspentTxOut(t.id, index, txOut.address, txOut.amount)
+        );
+      })
+      .reduce((a, b) => a.concat(b), []);
+
+    const consumedTxOuts = aTransactions
+      .map(t => t.txIns)
+      .reduce((a, b) => a.concat(b), [])
+      .map(txIn => new UnspentTxOut(txIn.txOutId, txIn.txOutIndex, "", 0));
+
+    const resultingUnspentTxOuts = aUnspentTxOuts
+      .filter(
+        uTxO =>
+          !this.findUnspentTxOut(uTxO.txOutId, uTxO.txOutIndex, consumedTxOuts)
+      )
+      .concat(newUnspentTxOuts);
+    return resultingUnspentTxOuts;
+  }
+
+  findUnspentTxOut(transactionId, index, aUnspentTxOuts) {
+    return aUnspentTxOuts.find(
+      uTxO => uTxO.txOutId === transactionId && uTxO.txOutIndex === index
+    );
   }
 
   getLastedBlock() {
@@ -65,7 +106,8 @@ class Chain {
   mineBlock(transactions) {
     let nonce = 0;
     const latestBlock = this.getLastedBlock();
-    const difficulty = this.getDifficulty();
+    let difficulty = this.getDifficulty();
+    if (difficulty < 0) difficulty = 0;
     while (true) {
       const newBlock = new Block(
         latestBlock.index + 1,
@@ -89,13 +131,124 @@ class Chain {
     }
   }
 
+  mineAddBlockWithTransaction(senderPrivateKey, amount, receiverAddress) {
+    const coinbaseTx = this.getCoinbaseTransaction(
+      process.env.SERVER_KEY,
+      this.getLastedBlock().index + 1
+    );
+    const tx = this.createTransaction(
+      receiverAddress,
+      amount,
+      senderPrivateKey,
+      this.unspendTxOut
+    );
+    return this.mineAddBlock([coinbaseTx, tx]);
+  }
+
+  createTransaction(receiverAddress, amount, privateKey, unspendTxOut) {
+    const senderAddress = getPublicKey(privateKey);
+    const senderUnspendTxOut = unspendTxOut.filter(
+      u => u.address === senderAddress
+    );
+
+    let { listUnspentTxOut, leftOverAmount } = this.findAmountUnspendTxOut(
+      amount,
+      senderUnspendTxOut
+    );
+    if (listUnspentTxOut === null) {
+      return false;
+    }
+    const txIns = [];
+    for (const includedUnspentTxOut of listUnspentTxOut) {
+      txIns.push(
+        new TxIn(includedUnspentTxOut.txOutId, includedUnspentTxOut.txOutIndex)
+      );
+    }
+
+    const tx = new Transaction();
+    tx.txIns = txIns;
+    tx.txOuts = this.createTxOuts(
+      receiverAddress,
+      senderAddress,
+      amount,
+      leftOverAmount
+    );
+    tx.id = tx.generateId();
+
+    tx.txIns = tx.txIns.map(txIn => {
+      txIn.signature = txIn.signTxIn(tx.id, privateKey, unspendTxOut);
+      return txIn;
+    });
+
+    return tx;
+  }
+
+  createTxOuts(receiverAddress, myAddress, amount, leftOverAmount) {
+    const txOut1 = new TxOut(receiverAddress, amount);
+    if (leftOverAmount === 0) {
+      return [txOut1];
+    } else {
+      const leftOverTx = new TxOut(myAddress, leftOverAmount);
+      return [txOut1, leftOverTx];
+    }
+  }
+
+  findAmountUnspendTxOut(amount, unspendTxOuts) {
+    let currentAmount = 0;
+    let listUnspentTxOut = [];
+    for (const unspendTxOut of unspendTxOuts) {
+      listUnspentTxOut.push(unspendTxOut);
+      currentAmount = currentAmount + unspendTxOut.amount;
+      if (currentAmount >= amount) {
+        const leftOverAmount = currentAmount - amount;
+        return { listUnspentTxOut, leftOverAmount };
+      }
+    }
+
+    return {
+      listUnspentTxOut: null
+    };
+  }
+
+  mineAddBlockWithTransactionPayed(receiverAddress, amount) {
+    const txIns = [
+      {
+        signature: "",
+        txOutId: "",
+        txOutIndex: this.getLastedBlock().index + 1
+      }
+    ];
+    const txOuts = [
+      {
+        address: receiverAddress,
+        amount: amount
+      }
+    ];
+    const tx = new Transaction();
+    tx.txIns = txIns;
+    tx.txOuts = txOuts;
+    tx.id = tx.generateId();
+    return this.mineAddBlock([tx]);
+  }
+
+  getCoinbaseTransaction(address, blockIndex) {
+    const t = new Transaction();
+    const txIn = new TxIn("", blockIndex);
+    txIn.signature = "";
+
+    t.txIns = [txIn];
+    t.txOuts = [new TxOut(address, COINBASE_AMOUNT)];
+    t.id = t.generateId();
+    return t;
+  }
+
   getDifficulty() {
     const latestBlock = this.getLastedBlock();
     if (
       latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
       latestBlock.index !== 0
     ) {
-      return getAdjustedDifficulty();
+      return this.getAdjustedDifficulty();
     } else {
       return latestBlock.difficulty;
     }
@@ -107,7 +260,8 @@ class Chain {
     ];
     const timeExpected =
       BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
-    const timeTaken = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
+    const timeTaken =
+      this.getLastedBlock().timestamp - prevAdjustmentBlock.timestamp;
     if (timeTaken < timeExpected / 2) {
       return prevAdjustmentBlock.difficulty + 1;
     } else if (timeTaken > timeExpected * 2) {
@@ -120,6 +274,12 @@ class Chain {
   hashMatchesDifficulty(hash, difficulty) {
     const requiredPrefix = "0".repeat(difficulty);
     return hash.startsWith(requiredPrefix);
+  }
+
+  getAmountUser(address) {
+    return this.unspendTxOut
+      .filter(b => b.address === address)
+      .reduce((a, b) => a + b.amount, 0);
   }
 }
 
