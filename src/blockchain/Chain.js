@@ -1,7 +1,7 @@
 const Transaction = require("./Transaction");
 const TxIn = require("./TxIn");
 const TxOut = require("./TxOut");
-const Block = require("./Block");
+const { Block, isValidBlock } = require("./Block");
 const UnspentTxOut = require("./UnspendTxOut");
 const BLOCK_GENERATION_INTERVAL = 2;
 const { getPublicKey } = require("./utils");
@@ -16,11 +16,11 @@ class Chain {
   }
 
   createGenesisBlock() {
-    return new Block(0, "0", 0, 0, []);
+    return new Block(0, "0", "0", 0, 0, []);
   }
 
   addBlockToChain(block) {
-    if (!block.isValidBlock(this.getLastedBlock())) return false;
+    if (!isValidBlock(block, this.getLastedBlock())) return false;
     const retVal = this.updateUnspentTxOuts(
       block.transactions,
       this.unspendTxOut
@@ -65,18 +65,18 @@ class Chain {
     return this.chain[this.chain.length - 1];
   }
 
-  isValidChain() {
+  isValidChain(chain) {
     const realGenesis = JSON.stringify(this.createGenesisBlock());
 
-    if (realGenesis !== JSON.stringify(this.chain[0])) {
+    if (realGenesis !== JSON.stringify(chain[0])) {
       return false;
     }
 
-    for (let i = 1, length = this.block.length; i < length; i++) {
-      const currentBlock = this.chain[i];
-      const previousBlock = this.chain[i - 1];
+    for (let i = 1, length = chain.length; i < length; i++) {
+      const currentBlock = chain[i];
+      const previousBlock = chain[i - 1];
 
-      if (!currentBlock.isValidBlock(previousBlock)) {
+      if (!isValidBlock(currentBlock, previousBlock)) {
         return false;
       }
     }
@@ -86,8 +86,9 @@ class Chain {
 
   replaceChain(newChain) {
     if (
-      newChain.isValidChain() &&
-      newChain.getAccumulatedDifficulty() > this.getAccumulatedDifficulty()
+      this.isValidChain(newChain) &&
+      this.getAccumulatedDifficulty(newChain) >
+        this.getAccumulatedDifficulty(this.chain)
     ) {
       this.chain = newChain;
       return true;
@@ -96,8 +97,8 @@ class Chain {
     }
   }
 
-  getAccumulatedDifficulty() {
-    return this.chain
+  getAccumulatedDifficulty(chain) {
+    return chain
       .map(block => block.difficulty)
       .map(difficulty => Math.pow(2, difficulty))
       .reduce((a, b) => a + b);
@@ -111,6 +112,7 @@ class Chain {
     while (true) {
       const newBlock = new Block(
         latestBlock.index + 1,
+        new Date().getTime(),
         latestBlock.hash,
         nonce,
         difficulty,

@@ -2,6 +2,7 @@ const express = require("express");
 //const redis = require("../redis");
 const blockchain = require("../blockchain");
 const router = express.Router();
+const WebSocket = require("./../socket/index");
 
 /**
  * Get all Blocks
@@ -24,6 +25,7 @@ router.post("/add", function(req, res, next) {
     addressReceving
   );
   if (validBlock) {
+    WebSocket.broadcastLatest();
     res.json({ block: blockchain.getLastedBlock() });
   } else {
     res.status(400).send("Bad Block");

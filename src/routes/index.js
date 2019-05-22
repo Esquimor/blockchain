@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const blockchain = require("../blockchain");
+const websocket = require("../socket/index");
 
 /* GET users listing. */
 router.get("/", function(req, res, next) {
@@ -21,6 +22,11 @@ router.post("/amount/add", function(req, res, next) {
   } else {
     res.status(500).send("an error has occured");
   }
+});
+
+router.post("/addPeer", (req, res) => {
+  websocket.connectToPeers(req.body.peer);
+  res.send();
 });
 
 module.exports = router;

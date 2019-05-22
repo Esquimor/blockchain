@@ -6,7 +6,6 @@ const dotenv = require("dotenv");
 // Env Variable
 dotenv.config();
 const httpPort = parseInt(process.env.HTTP_PORT) || 8001;
-const p2pPort = parseInt(process.env.P2P_PORT) || 8301;
 
 const initHttpServer = myHttpPort => {
   const app = express();
