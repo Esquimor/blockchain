@@ -112,7 +112,8 @@ class Websocket {
       } else if (receivedBlocks.length === 1) {
         this.broadcast(this.queryAllMsg());
       } else {
-        blockchain.replaceChain(receivedBlocks);
+        !blockchain.replaceChain(receivedBlocks) &&
+          this.broadcast(this.responseChainMsg());
       }
     }
   }
