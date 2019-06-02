@@ -16,6 +16,7 @@ router.post("/amount/add", function(req, res, next) {
     amount
   );
   if (validBlock) {
+    websocket.broadcastLatest();
     res.status(200).send({
       block: blockchain.getLastedBlock()
     });
@@ -26,7 +27,15 @@ router.post("/amount/add", function(req, res, next) {
 
 router.post("/addPeer", (req, res) => {
   websocket.connectToPeers(req.body.peer);
-  res.send();
+  res.status(200).send({
+    p2p: process.env.P2P_PORT || 8301
+  });
+});
+
+router.get("/listPeer", (req, res) => {
+  res.status(200).send({
+    peers: websocket.getSockets()
+  });
 });
 
 module.exports = router;

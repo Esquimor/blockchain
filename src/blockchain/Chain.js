@@ -3,10 +3,10 @@ const TxIn = require("./TxIn");
 const TxOut = require("./TxOut");
 const { Block, isValidBlock } = require("./Block");
 const UnspentTxOut = require("./UnspendTxOut");
-const BLOCK_GENERATION_INTERVAL = 2;
 const { getPublicKey } = require("./utils");
 
-const DIFFICULTY_ADJUSTMENT_INTERVAL = 2;
+const BLOCK_GENERATION_INTERVAL = 1;
+const DIFFICULTY_ADJUSTMENT_INTERVAL = 1;
 const COINBASE_AMOUNT = 5;
 
 class Chain {

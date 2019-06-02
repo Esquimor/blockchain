@@ -8,6 +8,7 @@ class Block {
     this.nonce = nonce;
     this.difficulty = difficulty;
     this.transactions = transactions;
+    this.node = process.env.HTTP_PORT || 8001;
     this.hash = generateHash(
       this.index,
       this.timestamp,

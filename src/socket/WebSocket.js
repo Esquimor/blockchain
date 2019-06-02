@@ -29,7 +29,7 @@ class Websocket {
     this.sockets.push(ws);
     this.initMessageHandler(ws);
     this.initErrorHandler(ws);
-    this.write(ws, this.queryChainLengthMsg());
+    this.write(ws, this.responseChainMsg());
   }
 
   initMessageHandler(ws) {

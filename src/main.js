@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const _ = require("lodash");
 const dotenv = require("dotenv");
+const cors = require("cors");
 
 // Env Variable
 dotenv.config();
@@ -10,6 +11,7 @@ const httpPort = parseInt(process.env.HTTP_PORT) || 8001;
 const initHttpServer = myHttpPort => {
   const app = express();
   app.use(bodyParser.json());
+  app.use(cors());
 
   // Route
   const indexRouter = require("./routes/index");
