@@ -9,7 +9,7 @@ const router = express.Router();
  * @returns {Block[]}
  */
 router.get("/amount", function(req, res, next) {
-  res.status(200).send({ amount: blockchain.getAmountUser(req.body.address) });
+  res.status(200).send({ amount: blockchain.getAmountUser(req.query.address) });
 });
 
 module.exports = router;
