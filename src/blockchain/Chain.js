@@ -5,8 +5,9 @@ const { Block, isValidBlock } = require("./Block");
 const UnspentTxOut = require("./UnspendTxOut");
 const { getPublicKey } = require("./utils");
 
-const BLOCK_GENERATION_INTERVAL = 1;
-const DIFFICULTY_ADJUSTMENT_INTERVAL = 1;
+const BLOCK_GENERATION_INTERVAL = 2;
+const DIFFICULTY_ADJUSTMENT_INTERVAL = 5;
+const MINIMUN_DIFFICULTY = 1;
 const COINBASE_AMOUNT = 5;
 
 class Chain {
@@ -16,7 +17,7 @@ class Chain {
   }
 
   createGenesisBlock() {
-    return new Block(0, "0", "0", 0, 0, []);
+    return new Block(0, "0", "0", 0, 0, [], 0);
   }
 
   addBlockToChain(block) {
@@ -108,7 +109,6 @@ class Chain {
     let nonce = 0;
     const latestBlock = this.getLastedBlock();
     let difficulty = this.getDifficulty();
-    if (difficulty < 0) difficulty = 0;
     while (true) {
       const newBlock = new Block(
         latestBlock.index + 1,
@@ -116,7 +116,8 @@ class Chain {
         latestBlock.hash,
         nonce,
         difficulty,
-        transactions
+        transactions,
+        process.env.HTTP_PORT || 8001
       );
       if (this.hashMatchesDifficulty(newBlock.hash, difficulty)) {
         return newBlock;
@@ -250,9 +251,12 @@ class Chain {
       latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
       latestBlock.index !== 0
     ) {
-      return this.getAdjustedDifficulty();
+      const difficulty = this.getAdjustedDifficulty();
+      return difficulty > 0 ? difficulty : MINIMUN_DIFFICULTY;
     } else {
-      return latestBlock.difficulty;
+      return latestBlock.difficulty > 0
+        ? latestBlock.difficulty
+        : MINIMUN_DIFFICULTY;
     }
   }
 
